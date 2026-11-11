@@ -1,0 +1,6 @@
+# This project is a standard Next.js App Router site. On Netlify it is built
+# with `next build` and served by the Netlify Next.js runtime. The `npm run build`
+# script targets a Cloudflare Workers (vinext) pipeline and is not used here.
+[build]
+  command = "npx next build"
+  publish = ".next"
