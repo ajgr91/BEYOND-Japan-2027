@@ -1,9 +1,8 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 export const metadata: Metadata = {
-  title: "Beyond Japan 2027 — The Northern Route",
-  description: "Un viaje hacia el norte de Japón · 24 abril – 15 mayo 2027"
+ title:'BEYOND — Un cuaderno de Japón',
+ description:'Del 24 de abril al 15 de mayo de 2027. Un viaje de Tokio al norte de Japón, contado en siete capítulos.',
+ icons:{icon:'/favicon.svg'},
 };
-export default function RootLayout({children}:{children:React.ReactNode}) {
-  return <html lang="es"><body>{children}</body></html>;
-}
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="es"><body>{children}</body></html>}

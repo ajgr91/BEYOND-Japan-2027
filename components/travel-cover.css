@@ -1,0 +1,28 @@
+.travel-cover{background:var(--paper);padding:0 5.5%;overflow:hidden}
+.cover-opening{position:relative;display:grid;grid-template-columns:.95fr 1.05fr;gap:10%;align-items:center;min-height:690px;padding:68px 4px 102px}
+.cover-copy{padding-bottom:4px}
+.cover-overline{font:400 10px/1.8 var(--sans);letter-spacing:2.5px;color:var(--red)}
+.cover-copy h1{font:400 clamp(70px,7vw,108px)/.98 var(--serif);letter-spacing:-4px;margin:30px 0 30px}
+.cover-copy h1 em{color:#7e8774}
+.cover-description{font-size:13px;line-height:1.95;color:var(--muted)}
+.cover-link{display:inline-flex;gap:18px;align-items:center;margin-top:32px;font-size:11px}
+.cover-link>span{display:grid;place-items:center;width:52px;height:52px;border:1px solid #a8af9c;border-radius:50%;transition:background .2s,color .2s,transform .2s}
+.cover-link:hover>span{background:var(--ink);color:var(--paper);transform:translate(2px,-2px)}
+.cover-photograph{align-self:start;position:relative;margin:0 6% 0 0;max-width:570px}
+.cover-photo-top{display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:1.7px;color:var(--muted);margin-bottom:15px}
+.cover-photo-top>span:last-child{font:16px serif;letter-spacing:4px}
+.cover-photograph img{width:100%;height:clamp(370px,35vw,530px);object-fit:cover;object-position:50% 48%;filter:saturate(.72)}
+.cover-photograph figcaption{display:flex;justify-content:space-between;gap:15px;color:var(--muted);font-size:8px;line-height:1.7;margin-top:12px}
+.cover-photograph figcaption>span:last-child{font:italic 14px/1.4 var(--serif)}
+.cover-japanese{position:absolute;right:-2.2%;top:92px;writing-mode:vertical-rl;font:13px/1.8 serif;letter-spacing:7px;color:#8b927f}
+.cover-inscription{position:absolute;bottom:27px;left:55%;display:flex;align-items:center;gap:17px}
+.cover-inscription>span{border:1px solid var(--red);padding:5px;writing-mode:vertical-rl;font:22px/1.3 serif;color:var(--red);transform:rotate(-5deg)}
+.cover-inscription p{font:italic 21px/1.4 var(--serif);color:#7e8774}
+.cover-colophon{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:25px;font-size:8px;letter-spacing:1.1px;color:var(--muted);line-height:1.8}
+.cover-colophon a{display:flex;align-items:center;gap:12px}
+.cover-colophon a:hover{color:var(--red)}
+.site-header nav{margin-left:auto}
+@media(min-width:1650px){.cover-opening{min-height:790px;padding-top:85px}.cover-copy h1{font-size:120px}.cover-photograph img{height:570px}.cover-description{font-size:15px}.cover-link{font-size:13px}}
+@media(max-width:1050px){.cover-opening{gap:7%;min-height:630px;padding-top:55px}.cover-copy h1{font-size:76px;letter-spacing:-3px}.cover-photograph img{height:400px}.cover-colophon{font-size:7px}.cover-inscription p{font-size:19px}}
+@media(max-width:760px){.travel-cover{padding:0 7%}.cover-opening{display:flex;flex-direction:column;align-items:stretch;gap:38px;min-height:0;padding:42px 0 108px}.cover-copy h1{font-size:clamp(64px,16vw,94px);letter-spacing:-3px;margin:25px 0}.cover-overline{font-size:8px;letter-spacing:2px}.cover-description{font-size:12px}.cover-link{margin-top:24px;font-size:11px}.cover-link>span{width:44px;height:44px}.cover-photograph{margin:0;width:100%;max-width:none}.cover-photograph img{height:340px}.cover-photo-top{font-size:7px;margin-bottom:10px}.cover-photograph figcaption{font-size:7px}.cover-photograph figcaption>span:last-child{font-size:13px}.cover-japanese{top:45px;right:-2%;font-size:11px;letter-spacing:6px}.cover-inscription{left:1px;bottom:26px;gap:13px}.cover-inscription>span{font-size:18px;padding:4px}.cover-inscription p{font-size:18px}.cover-colophon{font-size:7px;gap:18px;align-items:flex-start;padding:19px 0}.cover-colophon>span:nth-child(2){display:none}.cover-colophon a{max-width:130px;gap:8px;text-align:right}.site-header nav>a{display:flex}.site-header nav button:last-child{display:none}.site-header nav{gap:20px}}
+@media(prefers-reduced-motion:reduce){.cover-link>span{transition:none}}
