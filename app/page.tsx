@@ -13,7 +13,7 @@ const number=(n:number)=>String(n).padStart(2,'0');
 function dateForDay(i:number){return new Date(Date.UTC(2027,3,24+i)).toLocaleDateString('es-ES',{day:'numeric',month:'short',timeZone:'UTC'}).replace('.','');}
 export default function Home(){
  const {scrollTo,stopScroll,startScroll}=usePageMotion();
- const [active,setActive]=useState(0),[flat,setFlat]=useState(true),[bearing,setBearing]=useState(0),[zoom,setZoom]=useState(1),[overview,setOverview]=useState(true);
+ const [active,setActive]=useState(0),[flat,setFlat]=useState(true),[bearing,setBearing]=useState(0),[zoom,setZoom]=useState(1),[overview,setOverview]=useState(false);
  const [panel,setPanel]=useState<Panel>(null),[filter,setFilter]=useState(-1),[openDay,setOpenDay]=useState<number|null>(null);
  const {modal,close}=useAnimatedDrawer({open:panel!==null,onClosed:()=>setPanel(null),stopScroll,startScroll});
  const articleRefs=useRef<(HTMLElement|null)[]>([]),chapterLock=useRef<number|null>(null);

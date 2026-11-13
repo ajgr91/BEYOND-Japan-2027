@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { chapters } from '../lib/journey';
+import { layoutMapLabels, type MapLabel, type MapRect } from '../lib/map-label-layout';
+import './japan-map-labels.css';
 import { illustratedPolygons, mapBounds, mapPoint, reliefHeight, waveOffset, type JapanGeometry } from '../lib/japan-relief';
 
 type Props = {
@@ -27,6 +29,7 @@ const stops = [
   { name: 'Universal Studios', coords: [135.432, 34.665], chapter: 5 },
 ];
 const westLabels = new Set(['Hakodate', 'Aomori', 'Matsumoto', 'Kioto', 'Otaru', 'Hirosaki', 'Narai-juku']);
+const chapterStops = [0, 1, 3, 4, 5, 6, 0];
 function project(lon: number, lat: number, blend = 1) {
   const [x, z] = mapPoint(lon, lat);
   return new THREE.Vector3(x, reliefHeight(x, z, blend), z);
@@ -79,6 +82,7 @@ function makeTextures(data: JapanGeometry) {
 
 export default function JapanMap({ selected, onSelect, overview = false, flat = false, zoom = 1, bearing = 0, onBearingChange, onZoomChange }: Props) {
   const host = useRef<HTMLDivElement>(null), labels = useRef<(HTMLButtonElement | null)[]>([]);
+  const dots = useRef<(HTMLButtonElement | null)[]>([]), leaders = useRef<(SVGPathElement | null)[]>([]);
   const [failed, setFailed] = useState(false), [ready, setReady] = useState(false);
   const state = useRef({ selected, overview, flat, zoom, bearing });
   state.current = { selected, overview, flat, zoom, bearing };
@@ -86,7 +90,7 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
   useEffect(() => {
     if (!host.current) return;
     const container = host.current;
-    let dead = false, frame = 0, visible = true, lastFrame = 0, lastBlend = -1;
+    let dead = false, frame = 0, visible = true, lastFrame = 0, lastBlend = -1, mapReady = false;
     let textures: ReturnType<typeof makeTextures> | undefined;
     const abort = new AbortController();
     const fail = () => { if (!dead) { setFailed(true); } };
@@ -97,7 +101,7 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
     renderer.domElement.setAttribute('aria-hidden', 'true'); container.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-10, 10, 8, -8, .1, 100);
-    const center = new THREE.Vector3(0, 0, -1.4);
+    const center = state.current.overview ? new THREE.Vector3(0, 0, -1.4) : project(...chapters[state.current.selected].coords);
     camera.position.copy(center).add(new THREE.Vector3(-3, 20, 13));
     renderer.domElement.style.touchAction = 'pan-y';
     let inclination = state.current.flat ? .002 : .58;
@@ -161,15 +165,17 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
       routeMaterials.push(routeMaterial);
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), routeMaterial); line.computeLineDistances(); routes.add(line);
     });
-    const dotGeometry = new THREE.SphereGeometry(.037, 10, 10), dotMaterial = new THREE.MeshBasicMaterial({ color: '#a65343' });
-    const markers = stops.map(stop => { const dot = new THREE.Mesh(dotGeometry, dotMaterial); dot.position.copy(project(...stop.coords as [number, number])); scene.add(dot); return dot; });
-    const ring = new THREE.Mesh(new THREE.RingGeometry(.13, .147, 48), new THREE.MeshBasicMaterial({ color: '#a65343', side: THREE.DoubleSide, transparent: true, opacity: .65, depthTest: false }));
-    ring.rotation.x = -Math.PI / 2; scene.add(ring);
+    const markers = stops.map(stop => project(...stop.coords as [number, number]));
     const mistMaterial = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uTime: { value: 0 }, uBlend: { value: 1 } }, vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}', fragmentShader: cloudShader });
     const mist = new THREE.Mesh(new THREE.PlaneGeometry(20, 24), mistMaterial); mist.rotation.x = -Math.PI / 2; mist.position.set(0, .8, -1); scene.add(mist);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let motionReduced = reduced.matches, time = 0, size = 8;
     const onMotion = () => { motionReduced = reduced.matches; }; reduced.addEventListener('change', onMotion);
+    let labelSizes: { width: number; height: number }[] = [], sizesDirty = true;
+    const labelObserver = new ResizeObserver(() => { sizesDirty = true; });
+    labels.current.forEach(label => { if (label) labelObserver.observe(label); });
+    let slots = new Map<number, number>();
+    let layoutKey = '';
     const resize = () => { const { width, height } = container.getBoundingClientRect(); if (!width || !height) return; renderer.setSize(width, height); };
     const ro = new ResizeObserver(resize); ro.observe(container); resize();
     const io = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; }); io.observe(container);
@@ -178,7 +184,7 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
       if (dead) return;
       textures = makeTextures(data); material.alphaMap = textures.alpha; material.map = textures.color; material.needsUpdate = true;
       shadowMaterial.alphaMap = textures.alpha; shadowMaterial.needsUpdate = true;
-      paper.visible = shadow.visible = true; setReady(true);
+      paper.visible = shadow.visible = true; mapReady = true; setReady(true);
     }).catch(error => { if (error.name !== 'AbortError') fail(); });
     function updateRelief(b: number) {
       const vertices = surface.getAttribute('position');
@@ -186,7 +192,7 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
       vertices.needsUpdate = true; surface.computeVertexNormals();
       material.color.set('#90998f').lerp(new THREE.Color('#b9cbb9'), b); material.opacity = .7 + .3 * b; shadowMaterial.opacity = .04 + .12 * b;
       routes.children.forEach((child, index) => { const buffer = (child as THREE.Line).geometry.getAttribute('position'); routePoints[index].forEach((p, i) => buffer.setXYZ(i, p.x, reliefHeight(p.x, p.z, b) + .06, p.z)); buffer.needsUpdate = true; routeMaterials[index].opacity = .4 + .38 * b; });
-      for (const dot of markers) dot.position.y = reliefHeight(dot.position.x, dot.position.z, b) + .065;
+      for (const dot of markers) dot.y = reliefHeight(dot.x, dot.z, b) + .065;
       mistMaterial.uniforms.uBlend.value = b; lastBlend = b;
     }
     function animate(now: number) {
@@ -196,7 +202,7 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
       const target = current.overview ? new THREE.Vector3(0, 0, -1.4) : project(...chapters[current.selected].coords);
       const aspect = container.clientWidth / Math.max(1, container.clientHeight);
       const desiredSize = (current.overview ? Math.max(8.5, 7.3 / aspect) : current.selected === 1 ? 3.8 : current.selected === 2 ? 2.3 : 2.5) / current.zoom;
-      const speed = motionReduced ? 1 : .12;
+      const speed = motionReduced ? 1 : 1 - Math.exp(-elapsed / 260);
       center.lerp(target, speed);
       inclination = THREE.MathUtils.lerp(inclination, current.flat ? .002 : manualTilt, speed);
       const desiredAngle = THREE.MathUtils.degToRad(current.bearing);
@@ -208,23 +214,51 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
       camera.left = -size * aspect; camera.right = size * aspect; camera.top = size; camera.bottom = -size; camera.updateProjectionMatrix();
       if (Math.abs(b - lastBlend) > .0001) updateRelief(b);
       if (!motionReduced) time += elapsed / 1000; mistMaterial.uniforms.uTime.value = time;
-      const point = project(...chapters[current.selected].coords, b);
-      ring.position.copy(point); ring.position.y += .07; ring.scale.setScalar(motionReduced ? 1 : 1 + Math.sin(time * 1.8) * .08);
-      for (let i = 0; i < stops.length; i++) {
-        const el = labels.current[i]; if (!el) continue;
-        const show = i < 7 || (!current.overview && stops[i].chapter === current.selected);
-        const p = markers[i].position.clone().project(camera);
-        const inFrame = show && p.x > -.92 && p.x < .89 && p.y > -.82 && p.y < .85;
-        markers[i].visible = inFrame;
-        el.style.transform = `translate(${(p.x * .5 + .5) * container.clientWidth}px,${(-p.y * .5 + .5) * container.clientHeight}px)`;
-        el.style.opacity = inFrame ? '1' : '0'; el.style.visibility = inFrame ? 'visible' : 'hidden'; el.style.pointerEvents = inFrame ? 'auto' : 'none';
-        el.dataset.active = String(stops[i].chapter === current.selected || (current.selected === 6 && i === 0));
-      }
       renderer.render(scene, camera);
+      // Project only after render updates the camera's world matrix.
+      const width = container.clientWidth, height = container.clientHeight;
+      const key = `${current.selected}/${current.overview}/${width}/${height}`;
+      if (key !== layoutKey) { slots.clear(); sizesDirty = true; layoutKey = key; }
+      if (sizesDirty) { labelSizes = labels.current.map(el => ({ width: el?.offsetWidth ?? 0, height: el?.offsetHeight ?? 0 })); sizesDirty = false; }
+      const compact = width <= 480;
+      const bounds = { x: compact ? 12 : 24, y: compact ? 40 : 66, width: width - (compact ? 70 : 110), height: height - (compact ? 78 : 142) };
+      const hostRect = container.getBoundingClientRect();
+      const obstacles: MapRect[] = [];
+      for (const selector of ['.map-tools', '.map-chapter-nav']) {
+        const rect = container.parentElement?.querySelector(selector)?.getBoundingClientRect();
+        if (rect?.width && rect.height) obstacles.push({ x: rect.left - hostRect.left - 8, y: rect.top - hostRect.top - 8, width: rect.width + 16, height: rect.height + 16 });
+      }
+      const candidates: MapLabel[] = [];
+      for (let i = 0; i < stops.length; i++) {
+        const el = labels.current[i], dot = dots.current[i], leader = leaders.current[i]; if (!el || !dot || !leader) continue;
+        const primary = i === chapterStops[current.selected];
+        const nearby = stops[i].chapter === current.selected;
+        const show = i < 7 || (!current.overview && nearby);
+        const p = markers[i].clone().project(camera);
+        const x = (p.x * .5 + .5) * width, y = (-p.y * .5 + .5) * height;
+        const inFrame = mapReady && show && p.z > -1 && p.z < 1 && x > bounds.x && x < bounds.x + bounds.width && y > bounds.y && y < bounds.y + bounds.height;
+        el.style.visibility = 'hidden'; el.style.opacity = '0';
+        dot.hidden = !inFrame; leader.style.visibility = 'hidden';
+        if (!inFrame) continue;
+        dot.style.transform = `translate(${x - 16}px,${y - 16}px)`;
+        dot.tabIndex = 0;
+        candidates.push({ id: i, x, y, ...labelSizes[i], priority: primary ? 3 : nearby ? 2 : 1, west: westLabels.has(stops[i].name) });
+      }
+      const placed = layoutMapLabels(candidates, bounds, obstacles, slots);
+      slots = new Map(placed.map(label => [label.id, label.slot]));
+      for (const label of placed) {
+        const el = labels.current[label.id]!, leader = leaders.current[label.id]!;
+        el.style.transform = `translate(${label.left}px,${label.top}px)`;
+        el.style.visibility = 'visible'; el.style.opacity = '1'; dots.current[label.id]!.tabIndex = -1;
+        const endX = Math.max(label.left, Math.min(label.x, label.left + label.width));
+        const endY = Math.max(label.top, Math.min(label.y, label.top + label.height));
+        leader.setAttribute('d', `M ${label.x} ${label.y} L ${(label.x + endX) / 2} ${endY} L ${endX} ${endY}`);
+        leader.style.visibility = 'visible';
+      }
     }
     frame = requestAnimationFrame(animate);
     return () => {
-      dead = true; abort.abort(); cancelAnimationFrame(frame); ro.disconnect(); io.disconnect();
+      dead = true; abort.abort(); cancelAnimationFrame(frame); ro.disconnect(); io.disconnect(); labelObserver.disconnect();
       renderer.domElement.removeEventListener('pointerdown', pointerDown);
       renderer.domElement.removeEventListener('pointermove', pointerMove);
       renderer.domElement.removeEventListener('pointerup', pointerUp);
@@ -245,7 +279,17 @@ export default function JapanMap({ selected, onSelect, overview = false, flat = 
   }} aria-label="Mapa interactivo de Japón, ilustrado con ondas de tinta y relieve suave">
     {failed ? <div className="map-fallback"><img src="/japan-waves.svg" alt="Silueta de Japón con ondas de tinta" /><div>{chapters.map((chapter, i) => <button key={chapter.id} onClick={() => callbacks.current.onSelect?.(i)} aria-pressed={selected === i}>{String(i + 1).padStart(2, '0')} · {chapter.name} ↗</button>)}</div></div> : <>
       {!ready && <div className="map-loading">Dibujando Japón <span>···</span></div>}
-      {stops.map((stop, i) => <button key={stop.name} ref={el => { labels.current[i] = el; }} className="map-pin" data-west={westLabels.has(stop.name)} data-lake={stop.name === 'Towada'} style={{ opacity: 0, visibility: 'hidden' }} aria-label={`Ver etapa de ${stop.name}`} aria-pressed={stop.chapter === selected || (selected === 6 && i === 0)} onClick={() => selectStop(i)}><i /><span>{stop.name}</span></button>)}
+      <svg className="map-label-leaders" aria-hidden="true">{stops.map((stop, i) => <path key={stop.name} ref={el => { leaders.current[i] = el; }} data-selected={i === chapterStops[selected]} />)}</svg>
+      {stops.map((stop, i) => {
+        const primary = i === chapterStops[selected];
+        return <div className="map-location" key={stop.name}>
+          <button className="map-location-dot" ref={el => { dots.current[i] = el; }} hidden data-selected={primary} tabIndex={-1} aria-label={`Ver etapa de ${stop.name}`} onClick={() => selectStop(i)} />
+          <button ref={el => { labels.current[i] = el; }} className="map-location-label" data-selected={primary} data-nearby={stop.chapter === selected} style={{ opacity: 0, visibility: 'hidden' }} aria-label={primary ? `Etapa actual, capítulo ${selected + 1}: ${stop.name}` : `Ver etapa de ${stop.name}`} aria-pressed={primary} onClick={() => selectStop(i)}>
+            {primary && <small>{String(selected + 1).padStart(2, '0')} / ETAPA ACTUAL</small>}
+            <span>{stop.name}</span>
+          </button>
+        </div>;
+      })}
       <div className="map-water sea-one">MAR DEL JAPÓN</div><div className="map-water sea-two">OCÉANO PACÍFICO</div>
     </>}
   </div>;
