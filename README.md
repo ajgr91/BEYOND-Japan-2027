@@ -27,6 +27,7 @@ npm run build
 - Universal Studios Japan el 11 de mayo, como excursión desde Kioto.
 - Portada fotográfica y editorial con un acceso al recorrido, sin mapa ni controles visuales.
 - Atlas Three.js con silueta de Japón y ondas gráficas. Vista 2D y relieve, paradas, conexiones, giro por arrastre o botones, zoom de 0,5× a 4× y orientación al norte. El zoom mantiene la orientación. También admite teclado (flechas, +/− y Home) y gesto de pinza.
+- Seguimiento automático desde Tokio al avanzar y retroceder por los capítulos; etiquetas con separación automática y una selección activa de mayor contraste.
 - Atmósfera sutil con un shader procedural y respeto de `prefers-reduced-motion`.
 - Cuaderno con filtro de etapa y días desplegables. Velado con transición de opacidad y panel que entra desde la derecha, con cierre animado y Escape.
 - Lenis para scroll y saltos a secciones y etapas; el panel conserva su desplazamiento nativo.
@@ -43,6 +44,7 @@ npm run build
 - `components/travel-cover.tsx` y `components/travel-cover.css`: portada editorial.
 - `lib/japan-relief.ts`: silueta, ondas y disposición de las islas.
 - `components/japan-map.tsx`: escena Three.js, coordenadas y shader.
+- `components/japan-map-labels.css` y `lib/map-label-layout.ts`: aspecto de los marcadores y distribución de etiquetas sin solapamientos.
 - `app/page.tsx`: narrativa y paneles interactivos.
 - `app/globals.css`: diseño base.
 - `hooks/use-animated-drawer.ts`: apertura/cierre del panel después de asignar foco en su posición final, sin desplazar el contenedor de la página.
@@ -61,3 +63,19 @@ Cartografía [Natural Earth](https://www.naturalearthdata.com/), dominio públic
 Fuentes DM Sans e Instrument Serif con licencias OFL en `public/fonts`.
 
 Proyecto React + TypeScript con el entorno de desarrollo Vinext/Vite. Este trabajo se ha preparado y comprobado **en local**, sin desplegar ni modificar la web publicada. `npm run build` genera la compilación del entorno actual; para un alojamiento distinto, adaptar su salida al proveedor elegido.
+
+## Publicar en Netlify
+
+Esta entrega parte de `main` (`5504fb06648e2fa65dec41339263b24a87d29276`) y conserva el [fix del PR #1](https://github.com/ajgr91/BEYOND-Japan-2027/pull/1).
+
+- Mantener `netlify.toml` en la raíz: usa `npx next build` y publica `.next`.
+- `npm run build` conserva el flujo Vinext/Cloudflare para desarrollo; Netlify utiliza el comando de `netlify.toml`.
+- Se conservan `.openai/hosting.json`, las dependencias Leaflet y el lockfile del repositorio.
+- Descomprimir este ZIP y subir su contenido a la raíz del repositorio, incluyendo los archivos ocultos.
+
+Para comprobar el mismo build de Netlify:
+
+```sh
+npm ci
+npx next build
+```
